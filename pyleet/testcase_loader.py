@@ -10,6 +10,47 @@ import os
 from .datastructures import get_deserializer
 
 
+def _plain_text(content):
+    lines = content.splitlines()
+    cases = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue  # skip empty lines and comments
+        try:
+            parsed = ast.literal_eval(line)
+            # Expect tuple: (input_args, expected_output)
+            if not isinstance(parsed, tuple) or len(parsed) != 2:
+                raise ValueError(f"Invalid test case format: {line}")
+            input_args, expected = parsed
+            cases.append((input_args, expected))
+        except Exception as e:
+            raise ValueError(f"Failed to parse test case line: {line}\nError: {e}")
+    return cases
+
+
+def _plain_text_input(content):
+    """from leetgo format: https://github.com/j178/leetgo?tab=readme-ov-file#testcasestxt"""
+    raw_cases = content.split("\n\n")
+    _cases = []
+    for raw_case in raw_cases:
+        lines = raw_case.splitlines()
+        input = []
+        output = []
+        res = None
+        for ln in lines:
+            if "input:" in ln:
+                res = input
+                continue
+            if "output:" in ln:
+                res = output
+                continue
+            res.append(json.loads(ln))
+        _cases.append([input, output])
+
+    return [[input, output[0]] for [input, output] in _cases]
+
+
 def load_test_cases(file_path):
     """
     Load test cases from the given file path.
@@ -23,7 +64,7 @@ def load_test_cases(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Test case file not found: {file_path}")
 
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read().strip()
 
     # Try JSON first
@@ -34,23 +75,15 @@ def load_test_cases(file_path):
         pass  # Not JSON, try plain text
 
     # Fallback: parse as plain text, line by line
-    lines = content.splitlines()
-    cases = []
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue  # skip empty lines and comments
-        try:
-            parsed = ast.literal_eval(line)
-            # Expect tuple: (input_args, expected_output)
-            if not isinstance(parsed, tuple) or len(parsed) != 2:
-                raise ValueError(f"Invalid test case format: {line}")
-            input_args, expected = parsed
-            cases.append((input_args, expected))
-        except Exception as e:
-            raise ValueError(
-                f"Failed to parse test case line: {line}\nError: {e}")
-    return cases
+    try:
+        return _plain_text_input(content)
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        raise Exception("Invalid file")
+
+    return _plain_text(content)
 
 
 def _deserialize_recursive(item):
@@ -73,7 +106,8 @@ def _deserialize_recursive(item):
                 except Exception as e:
                     # Add context to the error
                     raise ValueError(
-                        f"Error deserializing type '{key}' with data '{data}': {e}") from e
+                        f"Error deserializing type '{key}' with data '{data}': {e}"
+                    ) from e
             else:
                 # Not a custom type, handle as regular dictionary
                 return {k: _deserialize_recursive(v) for k, v in item.items()}
@@ -108,11 +142,12 @@ def process_test_cases(testcases):
             # Direct tuple format: (input_args, expected)
             input_args, expected = entry
         elif isinstance(entry, dict):
-            if 'input' not in entry or 'expected' not in entry:
+            if "input" not in entry or "expected" not in entry:
                 raise ValueError(
-                    f"Test case dict missing 'input' or 'expected': {entry}")
-            input_args = entry['input']
-            expected = entry['expected']
+                    f"Test case dict missing 'input' or 'expected': {entry}"
+                )
+            input_args = entry["input"]
+            expected = entry["expected"]
         elif isinstance(entry, list) and len(entry) == 2:
             input_args, expected = entry
         else:
@@ -146,16 +181,16 @@ def _parse_json_cases(data):
     """
     cases = []
     if not isinstance(data, list):
-        raise ValueError(
-            "JSON test case file must contain a list of test cases")
+        raise ValueError("JSON test case file must contain a list of test cases")
 
     for entry in data:
         if isinstance(entry, dict):
-            if 'input' not in entry or 'expected' not in entry:
+            if "input" not in entry or "expected" not in entry:
                 raise ValueError(
-                    f"Test case dict missing 'input' or 'expected': {entry}")
-            input_args = entry['input']
-            expected = entry['expected']
+                    f"Test case dict missing 'input' or 'expected': {entry}"
+                )
+            input_args = entry["input"]
+            expected = entry["expected"]
         elif isinstance(entry, list) and len(entry) == 2:
             input_args, expected = entry
         else:

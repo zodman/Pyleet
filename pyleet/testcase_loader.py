@@ -34,21 +34,22 @@ def _plain_text_input(content):
     raw_cases = content.split("\n\n")
     _cases = []
     for raw_case in raw_cases:
+        if "input:" not in raw_case and "output:" not in raw_case:
+            raise ValueError("Invalid input file")
+
         lines = raw_case.splitlines()
-        input = []
-        output = []
+        input_data = []
+        output_data = []
         res = None
         for ln in lines:
             if "input:" in ln:
-                res = input
-                continue
-            if "output:" in ln:
-                res = output
-                continue
-            res.append(json.loads(ln))
-        _cases.append([input, output])
-
-    return [[input, output[0]] for [input, output] in _cases]
+                res = input_data
+            elif "output:" in ln:
+                res = output_data
+            elif res is not None:
+                res.append(json.loads(ln))
+        _cases.append([input_data, output_data[0]])
+    return _cases
 
 
 def load_test_cases(file_path):

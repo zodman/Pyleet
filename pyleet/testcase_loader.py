@@ -76,14 +76,12 @@ def load_test_cases(file_path):
 
     # Fallback: parse as plain text, line by line
     try:
+        # First, try the new leetgo format
         return _plain_text_input(content)
     except Exception:
-        import traceback
-
-        traceback.print_exc()
-        raise Exception("Invalid file")
-
-    return _plain_text(content)
+        # If that fails, fall back to the original plain text format.
+        # The _plain_text function will raise a ValueError if it also fails.
+        return _plain_text(content)
 
 
 def _deserialize_recursive(item):

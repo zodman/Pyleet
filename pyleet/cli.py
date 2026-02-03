@@ -54,12 +54,14 @@ def main():
         sys.exit(1)
 
     passed_count = 0
+    has_failed = False
     for idx, result in enumerate(results, 1):
         if result["passed"]:
             status = green("PASS", bold=True)
             passed_count += 1
         else:
             status = red("FAIL", bold=True)
+            has_failed = True
 
         print(f"Test Case {idx}: {status}")
         print(f"  Input:    {result['input']}")
@@ -73,7 +75,7 @@ def main():
 
         # Display captured print output if any
         if result.get("print_output") and result["print_output"].strip():
-            print(f"  Print Output:")
+            print("  Print Output:")
             # Indent each line of print output for clear association
             for line in result["print_output"].rstrip("\n").split("\n"):
                 print(f"    {line}")
@@ -86,6 +88,8 @@ def main():
     else:
         summary_text = red(f"Passed {str(passed_count)}/{total} test cases.")
     print(summary_text)
+    if has_failed:
+        exit(1)
 
 
 if __name__ == "__main__":
